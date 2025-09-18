@@ -39,6 +39,8 @@ const fileUpload = new FileMiddleware();
 router.post("/", fileUpload.diskLoader.single("file"), (req, res) => {
   res.json({ filename: fileUpload.filename });
 });
+
+// Route to download a file
 router.get("/:filename", (req, res) => {
   const filename = req.params.filename;
   const download = req.query.download || undefined;
