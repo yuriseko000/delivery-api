@@ -1,45 +1,41 @@
 const express = require("express");
 const multer = require("multer");
-const fs = require("fs");
 const path = require("path");
-
 const router = express.Router();
 
-// ✅ สร้างโฟลเดอร์ uploads ถ้ายังไม่มี
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-// ✅ ตั้งค่า multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, path.join(__dirname, "../uploads"));
   },
   filename: function (req, file, cb) {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-// ✅ อัปโหลดได้หลายรูป (ใช้ใน rider)
-router.post("/multiple", upload.array("images", 5), (req, res) => {
-  if (!req.files) return res.status(400).json({ success: false, message: "ไม่พบไฟล์" });
-
-  const urls = req.files.map((f) => `/uploads/${f.filename}`);
-  return res.json({ success: true, message: "อัปโหลดสำเร็จ", urls });
-});
-
-// ✅ อัปโหลดได้รูปเดียว (ใช้ใน user)
+// 📸 อัปโหลดรูปเดียว
 router.post("/", upload.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false, message: "ไม่พบไฟล์" });
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "No file uploaded" });
+  }
 
-  return res.json({
+  const imageUrl = `/uploads/${req.file.filename}`;
+  res.json({
     success: true,
-    message: "อัปโหลดสำเร็จ",
-    url: `/uploads/${req.file.filename}`,
+    message: "อัปโหลดรูปสำเร็จ",
+    url: imageUrl,
   });
 });
 
-module.exports = router; // ✅ ไม่ต้องใส่ { router }
+// 📸 อัปโหลดหลายรูป
+router.post("/multiple", upload.array("images", 5), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ success: false, message: "No files uploaded" });
+  }
 
+  const urls = req.files.map((file) => `/uploads/${file.filename}`);
+  res.json({ success: true, message: "อัปโหลดหลายรูปสำเร็จ", urls });
+});
+
+module.exports = router;

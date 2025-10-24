@@ -29,10 +29,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ====== UPLOAD STATIC FOLDER ======
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ====== ROUTES ======
-const upload = require("./controller/upload");
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// ====== ROUTES ======
+const uploadRoute = require("./controller/upload");
 const authRoutes = require("./controller/auth");
 const addressRoutes = require("./controller/address");
 const riderRoutes = require("./controller/rider");
@@ -40,15 +43,8 @@ const shipmentRoutes = require("./controller/shipments");
 const locationRoutes = require("./controller/location");
 const userRoutes = require("./controller/users");
 
-console.log("🔍 upload:", require("./controller/upload"));
-console.log("🔍 auth:", require("./controller/auth"));
-console.log("🔍 address:", require("./controller/address"));
-console.log("🔍 rider:", require("./controller/rider"));
-console.log("🔍 shipments:", require("./controller/shipments"));
-console.log("🔍 location:", require("./controller/location"));
-console.log("🔍 users:", require("./controller/users"));
-
-app.use("/upload", upload);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/upload", uploadRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/rider", riderRoutes);
