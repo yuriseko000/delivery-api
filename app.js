@@ -44,7 +44,7 @@ const locationRoutes = require("./controller/location");
 const userRoutes = require("./controller/users");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/upload", uploadRoute);
+app.use("/api/upload", uploadRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/rider", riderRoutes);

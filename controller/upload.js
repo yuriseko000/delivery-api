@@ -1,41 +1,45 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const router = express.Router();
 
+// ====== ตั้งค่าโฟลเดอร์เก็บรูป ======
+const uploadDir = path.join(__dirname, "..", "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// ====== ตั้งค่า Multer สำหรับอัปโหลด ======
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, "../uploads"));
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+    cb(null, name);
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// 📸 อัปโหลดรูปเดียว
-router.post("/", upload.single("image"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "No file uploaded" });
+// ====== API: อัปโหลดไฟล์ ======
+router.post("/", upload.single("file"), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "ไม่พบไฟล์" });
+    }
+
+    // ✅ คืน URL กลับไปให้ Flutter ใช้
+    const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    return res.json({
+      success: true,
+      message: "อัปโหลดสำเร็จ",
+      url: fileUrl,
+    });
+  } catch (e) {
+    console.error("upload error:", e);
+    res.status(500).json({ success: false, message: "อัปโหลดไม่สำเร็จ" });
   }
-
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({
-    success: true,
-    message: "อัปโหลดรูปสำเร็จ",
-    url: imageUrl,
-  });
-});
-
-// 📸 อัปโหลดหลายรูป
-router.post("/multiple", upload.array("images", 5), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ success: false, message: "No files uploaded" });
-  }
-
-  const urls = req.files.map((file) => `/uploads/${file.filename}`);
-  res.json({ success: true, message: "อัปโหลดหลายรูปสำเร็จ", urls });
 });
 
 module.exports = router;
