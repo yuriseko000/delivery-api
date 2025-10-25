@@ -67,6 +67,51 @@ app.get("/check-tables", (req, res) => {
   });
 });
 
+// ====== TEMP ROUTE: DOWNLOAD DATABASE FILE ======
+const fs = require("fs");
+const path = require("path");
+
+// กำหนด path ของไฟล์ฐานข้อมูล (ตรงกับของนาย)
+const SQLITE_FILE = path.join(__dirname, "db", "delivery.db");
+
+// ใช้ตัวแปรจาก Environment บน Render เพื่อเปิด/ปิดการดาวน์โหลด
+const ENABLE_DB_DOWNLOAD = process.env.ENABLE_DB_DOWNLOAD === "true";
+const DB_DOWNLOAD_TOKEN = process.env.DB_DOWNLOAD_TOKEN || "";
+
+app.get("/download-db", (req, res) => {
+  try {
+    if (!ENABLE_DB_DOWNLOAD) {
+      return res.status(403).json({ success: false, message: "DB download disabled" });
+    }
+
+    // ตรวจ token ก่อนโหลด
+    const token = req.query.token || req.headers["x-db-token"];
+    if (!token || token !== DB_DOWNLOAD_TOKEN) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (!fs.existsSync(SQLITE_FILE)) {
+      return res.status(404).json({ success: false, message: "Database file not found" });
+    }
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", 'attachment; filename="delivery.db"');
+    res.setHeader("Cache-Control", "no-store");
+
+    const stream = fs.createReadStream(SQLITE_FILE);
+    stream.on("error", (err) => {
+      console.error("Stream error:", err);
+      if (!res.headersSent) res.status(500).send("Streaming error");
+    });
+    stream.pipe(res);
+  } catch (e) {
+    console.error("Download DB error:", e);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+// ====== END TEMP ROUTE ======
+
+
 // ====== START SERVER ======
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
